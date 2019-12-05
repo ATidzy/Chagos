@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1575562858741.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4048914645",
+    "id" : "8DF1E877",
+    "lastKnownWriteTime" : 1575566394,
+    "last_content_update" : 1575566394276,
+    "path" : "~/Desktop/Chagos_Project/test.R",
+    "project_path" : "test.R",
+    "properties" : {
+        "cursorPosition" : "45,0",
+        "scrollLine" : "32",
+        "tempName" : "Untitled2"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

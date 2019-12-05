@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1575519846280.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "5F5DADD",
+    "lastKnownWriteTime" : 1575562937,
+    "last_content_update" : 1575562937969,
+    "path" : "~/Desktop/Chagos_Project/dada2-b.R",
+    "project_path" : "dada2-b.R",
+    "properties" : {
+        "cursorPosition" : "33,3",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

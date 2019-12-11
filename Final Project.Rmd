@@ -1,6 +1,6 @@
 ---
 title: "Final project"
-author: "Alyssa Tidwell"
+author: "Reagan Dodge and Alyssa Tidwell"
 date: "12/7/2019"
 output: html_document
 ---
@@ -11,27 +11,189 @@ output: html_document
 
 * **DADA 2 (not the disease)**   
 * **Phyloseq**   
-* **c**  
-* **d**  
+* **Alpha Diversity**  
+* **Analysis**  
 
----------------------
+---------------------  
+
 #### **DADA 2**  
     
 Our starting point is a set of Illumina-sequenced paired-end fastq files that have been split (or “demultiplexed”) by sample and from which the barcodes/adapters have already been removed. The DADA2 package denoises and removes sequencing errors from this sequence data. The resulting amplicon sequence variant (ASV) table records the number of times each sequence variant was observed in each sample. This provides a census of a community. We then assign taxonomy, and import the information into the phyloseq package for the analysis of microbiome data.  
 
+**Create quality profile**  
 First, prepared fastq files are checked for quality by visualizing the quality profiles of both the forward and reverse reads.  
 ![](quality profile fnFs.png)
 ![](quality profile fnRs.png)
-The forward read quality (top) is not great, and the reverse read quality (below) is even worse. Luckily for us, the next step is to filter by the maximum number of “expected errors” allowed in a read with the maxEE parameter.
+The forward read quality (top) is not great, and the reverse read quality (below) is even worse.   
+
+**Filtering**  
+Luckily for us, the next step is to filter by the maximum number of “expected errors” allowed in a read with the maxEE parameter. The following code is truncating the forward reads at 250 base pairs, and the reverse reads at 160 base pairs:
+
 ```{r, echo=TRUE, eval=FALSE}
 out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs, truncLen=c(250,160),
                      maxN=0, maxEE=c(2,2), truncQ=2, rm.phix=TRUE,
                      compress=TRUE, multithread=TRUE) 
 ```
+The output looks something like this:
+```{r, echo=TRUE, eval=FALSE}
+                              Reads.in    reads.out
+Pooled_library_1_1.fastq.gz      73197     33343
+Pooled_library_10_1.fastq.gz     79906     40434
+Pooled_library_100_1.fastq.gz   148124     72661
+Pooled_library_101_1.fastq.gz   126504     58011
+Pooled_library_102_1.fastq.gz   123834     59020
+Pooled_library_103_1.fastq.gz   134525     60417
 
+```   
+This is showing us that out of the 73,197 total reads contained in the first file, only 33,343 were retained. 
+
+
+**Error Rates**  
 The error rate of the filtered data is then measured. The learnErrors method learns this error model from the data, by alternating estimation of the error rates and inference of sample composition until they converge on a jointly consistent solution. 
+**Let's start with the error rates of the forward reads:**
 ![](error plot F.png)
-![](error plot R.png)
-The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected. 
+```{r, echo=TRUE, eval=FALSE}
 
-Dereplication: DADA2 retains a summary of the quality information associated with each unique sequence. The consensus quality profile of a unique sequence is the average of the positional qualities from the dereplicated reads. These quality profiles inform the error model of the subsequent sample inference step, significantly increasing DADA2’s accuracy.
+> # Learn error rates ####
+> errF <- learnErrors(filtFs, multithread=TRUE)
+105096000 total bases in 420384 reads from 8 samples will be used for learning the error rates.
+```
+The error rates for each possible transition (A→C, A→G, …) are shown. Points are the observed error rates for each consensus quality score. The black line shows the estimated error rates after convergence of the machine-learning algorithm. The red line shows the error rates expected under the nominal definition of the Q-score. Here the estimated error rates (black line) are a good fit to the observed rates (points), and the error rates drop with increased quality as expected.
+
+**And now the error rates of the reverse reads:**
+
+![](error plot R.png)
+```{r, echo=TRUE, eval=FALSE}
+> errR <- learnErrors(filtRs, multithread=TRUE)
+101655520 total bases in 635347 reads from 12 samples will be used for learning the error rates.
+```
+We do expect to see a higher error rate weith reverse reads, so these results do fall in line with expected values.  
+
+**Dereplication**  
+Dereplication combines all identical sequencing reads into “unique sequences” with a corresponding “abundance” equal to the number of reads with that unique sequence. Dereplication substantially reduces computation time by eliminating redundant comparisons with the following code:
+```{r echo=TRUE, eval=FALSE}
+derepFs <- derepFastq(filtFs, verbose=TRUE)
+derepRs <- derepFastq(filtRs, verbose=TRUE)
+```
+
+
+DADA2 retains a summary of the quality information associated with each unique sequence. The consensus quality profile of a unique sequence is the average of the positional qualities from the dereplicated reads. These quality profiles inform the error model of the subsequent sample inference step, significantly increasing DADA2’s accuracy. Results for each are listed as such:
+
+```{r echo=TRUE, eval=FALSE}
+
+Dereplicating sequence entries in Fastq file: ../Chagos_Data/raw_data/filtered/99_F_filt.fastq.gz
+Encountered 30839 unique sequences from 77069 total sequences read.
+```
+
+***Sample Inference***  
+The sample core inference algorithm return an object describing DADA2 denoising results, for instance "128 sequence variants were inferred from 1979 input unique sequences."
+
+
+```{r echo=TRUE, eval=FALSE}
+
+Forward reads:
+
+dadaFs <- dada(derepFs, err=errF, multithread=TRUE)
+Sample 1 - 33343 reads in 14232 unique sequences.
+Sample 2 - 40434 reads in 17298 unique sequences.
+Sample 3 - 72661 reads in 29171 unique sequences.
+Sample 4 - 58011 reads in 25098 unique sequences.
+Sample 5 - 59020 reads in 24798 unique sequences.
+Sample 6 - 60417 reads in 25862 unique sequences.
+Sample 7 - 51443 reads in 22681 unique sequences.
+Sample 8 - 45055 reads in 19498 unique sequences.
+Sample 9 - 56475 reads in 21577 unique sequences.
+Sample 10 - 57620 reads in 25001 unique sequences.
+...
+
+Reverse reads:
+
+> dadaRs <- dada(derepRs, err=errR, multithread=TRUE)
+Sample 1 - 33343 reads in 7272 unique sequences.
+Sample 2 - 40434 reads in 9051 unique sequences.
+Sample 3 - 72661 reads in 16293 unique sequences.
+Sample 4 - 58011 reads in 12317 unique sequences.
+Sample 5 - 59020 reads in 11806 unique sequences.
+Sample 6 - 60417 reads in 13353 unique sequences.
+Sample 7 - 51443 reads in 10652 unique sequences.
+Sample 8 - 45055 reads in 10028 unique sequences.
+Sample 9 - 56475 reads in 13553 unique sequences.
+Sample 10 - 57620 reads in 11760 unique sequences.
+...
+```
+
+**Merging reads**  
+We then merge the forward and reverse reads together to obtain the full denoised sequences. Merging is performed by aligning the denoised forward reads with the reverse-complement of the corresponding denoised reverse reads, and then constructing the merged “contig” sequences. By default, merged sequences are only output if the forward and reverse reads overlap by at least 12 bases, and are identical to each other in the overlap region.  
+We use the following code:
+```{r echo=TRUE, eval=FALSE}
+
+> mergers <- mergePairs(dadaFs, derepFs, dadaRs, derepRs, verbose=TRUE)
+```
+
+
+
+```{r echo=TRUE, eval=FALSE}
+  abundance forward reverse nmatch nmismatch nindel prefer accept
+1      3531       1       2    156         0      0      1   TRUE
+2      2268       3       1    160         0      0      2   TRUE
+3      1936       4       1    160         0      0      2   TRUE
+4      1852       6       1    160         0      0      2   TRUE
+5      1809       5       1    160         0      0      2   TRUE
+6      1799       8       1    160         0      0      2   TRUE
+
+```
+**Build a table**  
+We can now construct an amplicon sequence variant table (ASV) table, a higher-resolution version of the OTU table produced by traditional methods. The code to do that is:  
+
+```{r eval=FALSE, echo=TRUE}
+> seqtab <- makeSequenceTable(mergers)
+```
+We can ensure that it was built properly by checking the dimentions of that table:
+```{r eval=FALSE, echo=TRUE}
+> dim(seqtab)
+[1]  163 6821
+```
+**Remove chimeras**  
+The core dada method corrects substitution and indel errors, but chimeras remain. Fortunately, the accuracy of the sequence variants after denoising makes identifying chimeras simpler than it is when dealing with fuzzy OTUs. Chimeric sequences are identified if they can be exactly reconstructed by combining a left-segment and a right-segment from two more abundant “parent” sequences.
+```{r eval=FALSE, echo=TRUE}
+> seqtab.nochim <- removeBimeraDenovo(seqtab, method="consensus", multithread=TRUE, verbose=TRUE)
+Identified 146 bimeras out of 6821 input sequences.
+```
+
+When we account for the abundances of those variants we see they account for only about 1% of the merged sequence reads.
+```{r eval=FALSE, echo=TRUE}
+> sum(seqtab.nochim)/sum(seqtab)
+[1] 0.9890885
+```
+**Tracking reads through the pipeline**  
+Finding the number of reads that made it through each step in the pipeline can be done using the following code:
+```{r eval=FALSE, echo=TRUE}
+> getN <- function(x) sum(getUniques(x))
+> track <- cbind(out, sapply(dadaFs, getN), sapply(dadaRs, getN), sapply(mergers, getN), rowSums(seqtab.nochim))
+> colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
+> rownames(track) <- sample.names
+```
+This results in a table
+```{r eval=FALSE, echo=TRUE}
+> head(track)
+     input filtered denoisedF denoisedR merged nonchim
+1    73197    33343     33273     33214  32424   32405
+10   79906    40434     40327     40365  39414   39414
+100 148124    72661     72400     72529  70807   66930
+101 126504    58011     57855     57917  56434   55015
+102 123834    59020     58859     58955  57513   57513
+103 134525    60417     60331     60362  59042   58909
+```
+We lost about half of our raw reads, with the maority of the loss occuring during filtering.  
+
+**Assign taxonomy**  
+
+```{r eval=FALSE, echo=TRUE}
+unqs.mock <- seqtab.nochim["Mock",]
+unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) 
+# Drop ASVs absent in the Mock
+cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
+```
+---------------------
+#### **Phyloseq**  
+    

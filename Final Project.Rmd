@@ -7,16 +7,17 @@ output: html_document
 
 **This document is designed to explain the process needed to take genenetic sequences and turn them into workable data that is ready for analysis.**   
   
-**This process has steps:**  
+**This process has 5 steps:**  
 
-* **DADA 2 (not the disease)**   
+* **DADA2 (not the disease)**
+* **Assign taxonomy**
 * **Phyloseq**   
-* **Alpha Diversity**  
+* **Alpha diversity**  
 * **Analysis**  
 
 ---------------------  
 
-#### **DADA 2**  
+### **DADA 2**  
     
 Our starting point is a set of Illumina-sequenced paired-end fastq files that have been split (or “demultiplexed”) by sample and from which the barcodes/adapters have already been removed. The DADA2 package denoises and removes sequencing errors from this sequence data. The resulting amplicon sequence variant (ASV) table records the number of times each sequence variant was observed in each sample. This provides a census of a community. We then assign taxonomy, and import the information into the phyloseq package for the analysis of microbiome data.  
 
@@ -130,7 +131,7 @@ We use the following code:
 > mergers <- mergePairs(dadaFs, derepFs, dadaRs, derepRs, verbose=TRUE)
 ```
 
-
+And get an overview of the results:
 
 ```{r echo=TRUE, eval=FALSE}
   abundance forward reverse nmatch nmismatch nindel prefer accept
@@ -173,7 +174,7 @@ Finding the number of reads that made it through each step in the pipeline can b
 > colnames(track) <- c("input", "filtered", "denoisedF", "denoisedR", "merged", "nonchim")
 > rownames(track) <- sample.names
 ```
-This results in a table
+This results in a table:
 ```{r eval=FALSE, echo=TRUE}
 > head(track)
      input filtered denoisedF denoisedR merged nonchim
@@ -184,15 +185,47 @@ This results in a table
 102 123834    59020     58859     58955  57513   57513
 103 134525    60417     60331     60362  59042   58909
 ```
-We lost about half of our raw reads, with the maority of the loss occuring during filtering.  
 
-**Assign taxonomy**  
+We lost about half of our raw reads, with the majority of the loss occuring during filtering.
 
+-------
+
+### **Assign taxonomy**   
+The assignTaxonomy function takes as input a set of sequences to ba classified, and a training set of reference sequences with known taxonomy, and outputs taxonomic assignments with at least minBoot bootstrap confidence.
+```{r eval=FALSE, echo=TRUE}
+taxa <- assignTaxonomy(seqtab.nochim, "~/tax/silva_nr_v128_train_set.fa.gz", multithread=TRUE)
+
+#and to add species (optional) use:
+taxa <- addSpecies(taxa, "~/tax/silva_species_assignment_v128.fa.gz")
+
+#then inspect:
+taxa.print <- taxa # Removing sequence rownames for display only
+rownames(taxa.print) <- NULL
+head(taxa.print)
+```
+The result is this great looking list!
+```{r eval=FALSE, echo=TRUE}
+enter result here
+```
+Something something bacteria.  
+**Is our information accurate?**  
+One of the samples included here was a “mock community”, in which a mixture of 20 known strains was sequenced (this mock community is supposed to be 21 strains, but P. acnes is absent from the raw data). Reference sequences corresponding to these strains were provided in the downloaded zip archive. We return to that sample and compare the sequence variants inferred by DADA2 to the expected composition of the community.
 ```{r eval=FALSE, echo=TRUE}
 unqs.mock <- seqtab.nochim["Mock",]
 unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) 
 # Drop ASVs absent in the Mock
 cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
+```
+```{r eval=FALSE, echo=TRUE}
+result
+```
+```{r eval=FALSE, echo=TRUE}
+mock.ref <- getSequences(file.path(path, "HMP_MOCK.v35.fasta"))
+match.ref <- sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
+cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
+```
+```{r eval=FALSE, echo=TRUE}
+result
 ```
 ---------------------
 #### **Phyloseq**  

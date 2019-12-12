@@ -203,30 +203,60 @@ taxa.print <- taxa # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
 ```
-The result is this great looking list!
+The result is this great looking table!
 ```{r eval=FALSE, echo=TRUE}
-enter result here
+    Kingdom    Phylum           Class                 Order                   Family                  
+[1,] "Bacteria" "Cyanobacteria"  "Oxyphotobacteria"    "Chloroplast"           NA                      
+[2,] "Bacteria" "Cyanobacteria"  "Oxyphotobacteria"    "Chloroplast"           NA                      
+[3,] "Bacteria" "Proteobacteria" "Alphaproteobacteria" "Sphingomonadales"      "Sphingomonadaceae"     
+[4,] "Bacteria" "Proteobacteria" "Gammaproteobacteria" "Betaproteobacteriales" "Burkholderiaceae"      
+[5,] "Bacteria" "Proteobacteria" "Gammaproteobacteria" "Alteromonadales"       "Pseudoalteromonadaceae"
+[6,] "Bacteria" "Proteobacteria" "Gammaproteobacteria" "Oceanospirillales"     "Halomonadaceae"        
+     Genus              
+[1,] NA                 
+[2,] NA                 
+[3,] "Sphingomonas"     
+[4,] "Pandoraea"        
+[5,] "Pseudoalteromonas"
+[6,] "Cobetia" 
+
+
 ```
-Something something bacteria.  
+We see only bacteria because we were specifically looking at the 16s gene. We make and export a Phyloseq object. 
+
 **Is our information accurate?**  
-One of the samples included here was a “mock community”, in which a mixture of 20 known strains was sequenced (this mock community is supposed to be 21 strains, but P. acnes is absent from the raw data). Reference sequences corresponding to these strains were provided in the downloaded zip archive. We return to that sample and compare the sequence variants inferred by DADA2 to the expected composition of the community.
-```{r eval=FALSE, echo=TRUE}
-unqs.mock <- seqtab.nochim["Mock",]
-unqs.mock <- sort(unqs.mock[unqs.mock>0], decreasing=TRUE) 
-# Drop ASVs absent in the Mock
-cat("DADA2 inferred", length(unqs.mock), "sample sequences present in the Mock community.\n")
-```
-```{r eval=FALSE, echo=TRUE}
-result
-```
-```{r eval=FALSE, echo=TRUE}
-mock.ref <- getSequences(file.path(path, "HMP_MOCK.v35.fasta"))
-match.ref <- sum(sapply(names(unqs.mock), function(x) any(grepl(x, mock.ref))))
-cat("Of those,", sum(match.ref), "were exact matches to the expected reference sequences.\n")
-```
-```{r eval=FALSE, echo=TRUE}
-result
-```
+In order to check the accuracy of our work so far, we'd need a mock community to compare it against. Since we don't have that yet, we'll skip this step for now.
+
 ---------------------
-#### **Phyloseq**  
-    
+
+### **Phyloseq**  
+
+Once we import abundance and related data from DADA2 (our Phyloseq object), we can use phyloseq's analysis wrappers for common analysis tasks.
+
+Once Phyloseq is LOCKED AND LOADED with numbered sample names, we ensure that the rank names are all as we need them:
+```{r eval=FALSE, echo=TRUE}
+> rank_names(ps)
+[1] "Kingdom" "Phylum"  "Class"   "Order"   "Family"  "Genus"   "Species"
+```
+The variables we'll be looking at are:
+
+```{r eval=FALSE, echo=TRUE}
+> sample_variables(ps)
+ [1] "Pooled library ID (from GIS)"   "Barcode"                        "sample #"                      
+ [4] "date"                           "Island"                         "site"                          
+ [7] "Lat"                            "Long"                           "Reef Type"                     
+[10] "Exposure"                       "Species tentative"              "RFLP ID Species ID - confirmed"
+[13] "Colony Colour"                  "avg. site temp"                 "Temp Range (oC)"               
+[16] "salinity"                       "Salinity Range (ppt)"           "depth (m)"                     
+[19] "Depth Range (m)"                "Negatives"    
+>ps 
+```
+
+
+```{r eval=FALSE, echo=TRUE}
+phyloseq-class experiment-level object
+otu_table()   OTU Table:         [ 2128 taxa and 93 samples ]
+sample_data() Sample Data:       [ 93 samples by 20 sample variables ]
+tax_table()   Taxonomy Table:    [ 2128 taxa by 7 taxonomic ranks ]
+```
+
